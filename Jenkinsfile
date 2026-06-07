@@ -40,7 +40,7 @@ pipeline {
                 )]) {
                     sh '''
                     echo "$PW" | docker login -u "$ID" --password-stdin
-                    docker build -f be/Dockerfile -t "$FULL_IMAGE" be
+                    docker build -f Dockerfile -t "$FULL_IMAGE" .
                     docker push "$FULL_IMAGE"
                     docker logout
                     '''
@@ -52,8 +52,8 @@ pipeline {
             steps {
                 sshagent(credentials: ['OCI_SERVER_2']) {
                     sh '''
-                    ssh -o StrictHostKeyChecking=no ubuntu@$SSH_HOST "sudo k3s kubectl apply -n '$K8S_NAMESPACE' -f -" < be/infra/be-deployment.yaml
-                    ssh -o StrictHostKeyChecking=no ubuntu@$SSH_HOST "sudo k3s kubectl apply -n '$K8S_NAMESPACE' -f -" < be/infra/be-service.yaml
+                    ssh -o StrictHostKeyChecking=no ubuntu@$SSH_HOST "sudo k3s kubectl apply -n '$K8S_NAMESPACE' -f -" < infra/be-deployment.yaml
+                    ssh -o StrictHostKeyChecking=no ubuntu@$SSH_HOST "sudo k3s kubectl apply -n '$K8S_NAMESPACE' -f -" < infra/be-service.yaml
                     ssh -o StrictHostKeyChecking=no ubuntu@$SSH_HOST "
                       sudo k3s kubectl set image deployment/'$K8S_DEPLOYMENT' '$K8S_CONTAINER'='$FULL_IMAGE' -n '$K8S_NAMESPACE' &&
                       sudo k3s kubectl rollout status deployment/'$K8S_DEPLOYMENT' -n '$K8S_NAMESPACE'
