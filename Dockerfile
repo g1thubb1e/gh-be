@@ -2,14 +2,15 @@ FROM gradle:8.14.3-jdk21 AS builder
 
 WORKDIR /app
 
-COPY build.gradle settings.gradle ./
+COPY build.gradle settings.gradle gradlew ./
 COPY gradle ./gradle
 
-RUN gradle dependencies --no-daemon
+RUN chmod +x gradlew
+RUN ./gradlew dependencies --no-daemon
 
 COPY src src
 
-RUN gradle clean bootJar --no-daemon
+RUN ./gradlew clean bootJar --no-daemon
 
 FROM eclipse-temurin:21-jre
 
