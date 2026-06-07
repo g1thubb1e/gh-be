@@ -39,3 +39,4 @@ out/
 .env
 *-vol
 .local
+kubeconfig
