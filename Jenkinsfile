@@ -40,7 +40,7 @@ pipeline {
                 )]) {
                     sh '''
                     echo "$PW" | docker login -u "$ID" --password-stdin
-                    docker build -f Dockerfile -t "$FULL_IMAGE" .
+                    docker build -f Dockerfile --network=host -t "$FULL_IMAGE" .
                     docker push "$FULL_IMAGE"
                     docker logout
                     '''
