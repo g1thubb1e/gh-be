@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA 평가 결과 조회</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .top-panel {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 1.2rem 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .top-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .top-inner h1 { font-size: 1.2rem; font-weight: 800; color: #0f172a; }
+
+        .main-content {
+            max-width: 1280px;
+            margin: 2rem auto;
+            padding: 0 1.5rem 5rem;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .total-info { font-size: 0.9rem; color: var(--text-muted); }
+
+        .size-select {
+            padding: 0.4rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 0.88rem;
+            background: #fff;
+            cursor: pointer;
+            outline: none;
+        }
+        .size-select:focus { border-color: var(--primary); }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+        thead tr {
+            background: #f1f5f9;
+            border-bottom: 2px solid var(--border);
+        }
+        thead th {
+            padding: 0.9rem 1rem;
+            text-align: left;
+            font-weight: 700;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: #f8fafc; }
+        tbody td {
+            padding: 0.85rem 1rem;
+            vertical-align: top;
+        }
+
+        .question-cell {
+            max-width: 400px;
+            word-break: break-all;
+        }
+        .arch-cell {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        .score-high { background: #dcfce7; color: #16a34a; }
+        .score-mid  { background: #fef9c3; color: #ca8a04; }
+        .score-low  { background: #fee2e2; color: #dc2626; }
+        .score-none { background: #f1f5f9; color: #94a3b8; }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: var(--text-main);
+        }
+        .btn:hover:not(:disabled) { background: #f1f5f9; border-color: #cbd5e1; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+
+        .page-info { font-size: 0.88rem; color: var(--text-muted); padding: 0 0.5rem; }
+
+        .empty-row td {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .spinner-wrap {
+            text-align: center;
+            padding: 3rem;
+        }
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid #f1f5f9;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<header class="top-panel">
+    <div class="top-inner">
+        <h1>QA 평가 결과 조회</h1>
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <label style="font-size:0.85rem; color:var(--text-muted);">페이지 크기</label>
+            <select class="size-select" id="size-select" onchange="onSizeChange()">
+                <option value="10">10개</option>
+                <option value="20" selected>20개</option>
+                <option value="50">50개</option>
+                <option value="100">100개</option>
+            </select>
+        </div>
+    </div>
+</header>
+
+<main class="main-content">
+    <div class="controls">
+        <span class="total-info" id="total-info">불러오는 중...</span>
+    </div>
+
+    <div class="card">
+        <div id="spinner-area" class="spinner-wrap">
+            <div class="spinner"></div>
+            <p style="font-size:0.85rem; color:var(--text-muted);">데이터를 불러오는 중...</p>
+        </div>
+
+        <table id="data-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th style="width:60px;">No.</th>
+                    <th style="width:180px;">Arch ID</th>
+                    <th>질문</th>
+                    <th style="width:100px; text-align:center;">Graph 점수</th>
+                    <th style="width:110px; text-align:center;">Vector 점수</th>
+                    <th style="width:160px;">생성일시</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+</main>
+
+<script>
+    const BASE_URL = 'http://70.12.246.38:8080/api';
+
+    let state = { page: 0, size: 20, totalElements: 0, totalPages: 0 };
+
+    async function fetchData() {
+        document.getElementById('spinner-area').style.display = 'block';
+        document.getElementById('data-table').style.display = 'none';
+        document.getElementById('total-info').textContent = '불러오는 중...';
+
+        try {
+            const res = await fetch(`${BASE_URL}/v1/admin/qa-eval?page=${state.page}&size=${state.size}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+
+            state.totalElements = data.totalElements;
+            state.totalPages = data.totalPages;
+
+            renderTable(data.content, data.page, data.size);
+            renderPagination();
+            document.getElementById('total-info').textContent =
+                `전체 ${data.totalElements.toLocaleString()}건`;
+        } catch (e) {
+            document.getElementById('spinner-area').innerHTML =
+                `<p style="color:#dc2626; padding:2rem;">데이터를 불러오지 못했습니다: ${e.message}</p>`;
+        }
+    }
+
+    function renderTable(rows, page, size) {
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+
+        if (!rows || rows.length === 0) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="6">데이터가 없습니다.</td></tr>';
+        } else {
+            rows.forEach((row, idx) => {
+                const no = page * size + idx + 1;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color:var(--text-muted);">${no}</td>
+                    <td class="arch-cell" title="${esc(row.archId)}">${esc(row.archId)}</td>
+                    <td class="question-cell">${esc(row.question)}</td>
+                    <td style="text-align:center;">${scoreBadge(row.graphScore)}</td>
+                    <td style="text-align:center;">${scoreBadge(row.vectorScore)}</td>
+                    <td style="color:var(--text-muted); font-size:0.82rem;">${formatDate(row.createdAt)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('spinner-area').style.display = 'none';
+        document.getElementById('data-table').style.display = 'table';
+    }
+
+    function renderPagination() {
+        const container = document.getElementById('pagination');
+        container.innerHTML = '';
+
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'btn';
+        prevBtn.textContent = '← 이전';
+        prevBtn.disabled = state.page === 0;
+        prevBtn.onclick = () => { state.page--; fetchData(); };
+
+        const pageInfo = document.createElement('span');
+        pageInfo.className = 'page-info';
+        pageInfo.textContent = `${state.page + 1} / ${state.totalPages || 1}`;
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'btn';
+        nextBtn.textContent = '다음 →';
+        nextBtn.disabled = state.page >= state.totalPages - 1;
+        nextBtn.onclick = () => { state.page++; fetchData(); };
+
+        container.append(prevBtn, pageInfo, nextBtn);
+    }
+
+    function onSizeChange() {
+        state.size = parseInt(document.getElementById('size-select').value);
+        state.page = 0;
+        fetchData();
+    }
+
+    function scoreBadge(score) {
+        if (score === null || score === undefined) {
+            return '<span class="score-badge score-none">-</span>';
+        }
+        const cls = score >= 4 ? 'score-high' : score >= 3 ? 'score-mid' : 'score-low';
+        return `<span class="score-badge ${cls}">${score}</span>`;
+    }
+
+    function formatDate(dt) {
+        if (!dt) return '-';
+        return dt.replace('T', ' ').substring(0, 19);
+    }
+
+    function esc(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    fetchData();
+</script>
+
+</body>
+</html>

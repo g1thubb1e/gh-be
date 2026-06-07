@@ -1,0 +1,7 @@
+User question:
+{{question}}
+
+AI answer to evaluate:
+{{answer}}
+
+Score (1-10):

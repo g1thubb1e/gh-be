@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>별점 피드백 조회</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #16a34a;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .top-panel {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 1.2rem 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .top-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .top-inner h1 { font-size: 1.2rem; font-weight: 800; color: #0f172a; }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1.5rem 5rem;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .total-info { font-size: 0.9rem; color: var(--text-muted); }
+
+        .size-select {
+            padding: 0.4rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 0.88rem;
+            background: #fff;
+            cursor: pointer;
+            outline: none;
+        }
+        .size-select:focus { border-color: var(--primary); }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        thead tr {
+            background: #f1f5f9;
+            border-bottom: 2px solid var(--border);
+        }
+        thead th {
+            padding: 0.9rem 1rem;
+            text-align: left;
+            font-weight: 700;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: #f8fafc; }
+        tbody td {
+            padding: 0.85rem 1rem;
+            vertical-align: top;
+        }
+
+        .question-cell {
+            max-width: 240px;
+            word-break: break-all;
+        }
+        .arch-cell {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .comment-cell {
+            max-width: 200px;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            word-break: break-all;
+        }
+
+        .answer-btn {
+            padding: 0.25rem 0.65rem;
+            border: 1px solid var(--border);
+            border-radius: 0.4rem;
+            background: #f8fafc;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--primary);
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .answer-btn:hover { background: #eff6ff; border-color: var(--primary); }
+
+        .score-badge {
+            display: inline-block;
+            padding: 0.2rem 0.65rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        .score-high { background: #dcfce7; color: #16a34a; }
+        .score-mid  { background: #fef9c3; color: #ca8a04; }
+        .score-low  { background: #fee2e2; color: #dc2626; }
+
+        .type-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 0.375rem;
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+        .type-graph  { background: #dbeafe; color: var(--primary); }
+        .type-vector { background: #dcfce7; color: var(--secondary); }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: var(--text-main);
+        }
+        .btn:hover:not(:disabled) { background: #f1f5f9; border-color: #cbd5e1; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .page-info { font-size: 0.88rem; color: var(--text-muted); padding: 0 0.5rem; }
+
+        .empty-row td { text-align: center; padding: 3rem; color: var(--text-muted); }
+
+        .spinner-wrap { text-align: center; padding: 3rem; }
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid #f1f5f9;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── 모달 ── */
+        #answer-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        #answer-modal.open { display: flex; align-items: flex-start; justify-content: center; }
+
+        .modal-box {
+            background: #fff;
+            border-radius: 1rem;
+            width: 100%;
+            max-width: 780px;
+            margin: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            max-height: 88vh;
+        }
+        .modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            background: #f8fafc;
+            border-radius: 1rem 1rem 0 0;
+            flex-shrink: 0;
+        }
+        .modal-meta { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
+        .modal-meta .question { font-size: 0.95rem; font-weight: 700; color: #0f172a; }
+        .modal-meta .meta-row { display: flex; gap: 0.5rem; align-items: center; font-size: 0.8rem; color: var(--text-muted); }
+        .modal-close {
+            width: 32px; height: 32px; flex-shrink: 0;
+            border: none; background: none; cursor: pointer; font-size: 1.4rem;
+            color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+            border-radius: 0.375rem; transition: background 0.15s;
+        }
+        .modal-close:hover { background: #e2e8f0; }
+
+        .modal-section-label {
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.05em; color: var(--text-muted);
+            padding: 0.75rem 1.5rem 0;
+            flex-shrink: 0;
+        }
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.75rem 1.5rem 1.5rem;
+        }
+        .modal-comment {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #475569;
+            margin: 0 1.5rem 0.5rem;
+            flex-shrink: 0;
+        }
+
+        /* 마크다운 렌더링 */
+        .md-content { font-size: 0.9rem; color: #334155; line-height: 1.7; }
+        .md-content p { margin-bottom: 0.9rem; }
+        .md-content strong { color: #0f172a; font-weight: 700; }
+        .md-content code {
+            background: #f1f5f9; padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem; font-size: 0.85em;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            color: #475569;
+        }
+        .md-content pre { background: #f1f5f9; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 1rem 0; }
+        .md-content pre code { background: none; padding: 0; }
+        .md-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.82rem; }
+        .md-content th, .md-content td { border: 1px solid #e2e8f0; padding: 0.5rem 0.75rem; text-align: left; }
+        .md-content th { background: #f8fafc; font-weight: 700; color: #475569; }
+        .md-content ul, .md-content ol { margin: 0.75rem 0 0.75rem 1.2rem; }
+        .md-content li { margin-bottom: 0.3rem; }
+        .md-content h1, .md-content h2, .md-content h3 { margin: 1.2rem 0 0.6rem; font-weight: 700; color: #0f172a; }
+    </style>
+</head>
+<body>
+
+<!-- 답변 모달 -->
+<div id="answer-modal" onclick="handleModalBgClick(event)">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-meta">
+                <span class="question" id="modal-question"></span>
+                <div class="meta-row" id="modal-meta-row"></div>
+            </div>
+            <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+        </div>
+        <div id="modal-comment-wrap" style="display:none;">
+            <div class="modal-section-label">코멘트</div>
+            <div class="modal-comment" id="modal-comment"></div>
+        </div>
+        <div class="modal-section-label">답변</div>
+        <div class="modal-body md-content" id="modal-content"></div>
+    </div>
+</div>
+
+<header class="top-panel">
+    <div class="top-inner">
+        <h1>별점 피드백 조회</h1>
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <label style="font-size:0.85rem; color:var(--text-muted);">페이지 크기</label>
+            <select class="size-select" id="size-select" onchange="onSizeChange()">
+                <option value="10" selected>10개</option>
+                <option value="20">20개</option>
+                <option value="50">50개</option>
+            </select>
+        </div>
+    </div>
+</header>
+
+<main class="main-content">
+    <div class="controls">
+        <span class="total-info" id="total-info">불러오는 중...</span>
+    </div>
+
+    <div class="card">
+        <div id="spinner-area" class="spinner-wrap">
+            <div class="spinner"></div>
+            <p style="font-size:0.85rem; color:var(--text-muted);">데이터를 불러오는 중...</p>
+        </div>
+
+        <table id="data-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th style="width:50px;">No.</th>
+                    <th style="width:90px;">질문자</th>
+                    <th style="width:150px;">Arch ID</th>
+                    <th>질문</th>
+                    <th style="width:70px; text-align:center;">타입</th>
+                    <th style="width:70px; text-align:center;">점수</th>
+                    <th>코멘트</th>
+                    <th style="width:70px; text-align:center;">답변</th>
+                    <th style="width:80px; text-align:center;">응답(s)</th>
+                    <th style="width:150px;">생성일시</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+</main>
+
+<script>
+    const BASE_URL = 'http://70.12.246.38:8080/api';
+
+    marked.setOptions({ breaks: true, gfm: true });
+
+    let state = { page: 0, size: 10, totalElements: 0, totalPages: 0 };
+
+    async function fetchData() {
+        document.getElementById('spinner-area').style.display = 'block';
+        document.getElementById('data-table').style.display = 'none';
+        document.getElementById('total-info').textContent = '불러오는 중...';
+
+        try {
+            const res = await fetch(`${BASE_URL}/v1/admin/rating-feedback?page=${state.page}&size=${state.size}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+
+            state.totalElements = data.totalElements;
+            state.totalPages = data.totalPages;
+
+            renderTable(data.content, data.page, data.size);
+            renderPagination();
+            document.getElementById('total-info').textContent =
+                `전체 ${data.totalElements.toLocaleString()}건`;
+        } catch (e) {
+            document.getElementById('spinner-area').innerHTML =
+                `<p style="color:#dc2626; padding:2rem;">데이터를 불러오지 못했습니다: ${e.message}</p>`;
+        }
+    }
+
+    function renderTable(rows, page, size) {
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+
+        if (!rows || rows.length === 0) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="10">데이터가 없습니다.</td></tr>';
+        } else {
+            rows.forEach((row, idx) => {
+                const no = page * size + idx + 1;
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `
+                    <td style="color:var(--text-muted);">${no}</td>
+                    <td>${esc(row.questioner)}</td>
+                    <td class="arch-cell" title="${esc(row.archId)}">${esc(row.archId)}</td>
+                    <td class="question-cell">${esc(row.question)}</td>
+                    <td style="text-align:center;">${typeBadge(row.type)}</td>
+                    <td style="text-align:center;">${scoreBadge(row.score)}</td>
+                    <td class="comment-cell">${row.comment ? esc(row.comment) : '<span style="color:#cbd5e1;">-</span>'}</td>
+                    <td style="text-align:center;"><button class="answer-btn" onclick='openModal(${JSON.stringify(row)})'>보기</button></td>
+                    <td style="text-align:center; color:var(--text-muted);">${row.responseTime != null ? row.responseTime : '-'}</td>
+                    <td style="color:var(--text-muted); font-size:0.8rem;">${formatDate(row.createdAt)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('spinner-area').style.display = 'none';
+        document.getElementById('data-table').style.display = 'table';
+    }
+
+    function openModal(row) {
+        document.getElementById('modal-question').textContent = row.question;
+
+        const metaRow = document.getElementById('modal-meta-row');
+        metaRow.innerHTML = `
+            ${typeBadge(row.type)}
+            ${scoreBadge(row.score)}
+            <span>${esc(row.questioner)}</span>
+            <span style="color:#cbd5e1;">|</span>
+            <span>${formatDate(row.createdAt)}</span>
+        `;
+
+        const commentWrap = document.getElementById('modal-comment-wrap');
+        if (row.comment) {
+            document.getElementById('modal-comment').textContent = row.comment;
+            commentWrap.style.display = 'block';
+        } else {
+            commentWrap.style.display = 'none';
+        }
+
+        document.getElementById('modal-content').innerHTML = renderMd(row.answer);
+        document.getElementById('answer-modal').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        document.getElementById('answer-modal').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    function handleModalBgClick(e) {
+        if (e.target === document.getElementById('answer-modal')) closeModal();
+    }
+
+    function renderPagination() {
+        const container = document.getElementById('pagination');
+        container.innerHTML = '';
+
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'btn';
+        prevBtn.textContent = '← 이전';
+        prevBtn.disabled = state.page === 0;
+        prevBtn.onclick = () => { state.page--; fetchData(); };
+
+        const pageInfo = document.createElement('span');
+        pageInfo.className = 'page-info';
+        pageInfo.textContent = `${state.page + 1} / ${state.totalPages || 1}`;
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'btn';
+        nextBtn.textContent = '다음 →';
+        nextBtn.disabled = state.page >= state.totalPages - 1;
+        nextBtn.onclick = () => { state.page++; fetchData(); };
+
+        container.append(prevBtn, pageInfo, nextBtn);
+    }
+
+    function onSizeChange() {
+        state.size = Number.parseInt(document.getElementById('size-select').value, 10);
+        state.page = 0;
+        fetchData();
+    }
+
+    function scoreBadge(score) {
+        if (score == null) return '<span style="color:#cbd5e1;">-</span>';
+        const cls = score >= 8 ? 'score-high' : score >= 5 ? 'score-mid' : 'score-low';
+        return `<span class="score-badge ${cls}">${score}</span>`;
+    }
+
+    function typeBadge(type) {
+        if (!type) return '';
+        const cls = type === 'graph' ? 'type-graph' : 'type-vector';
+        return `<span class="type-badge ${cls}">${type}</span>`;
+    }
+
+    function renderMd(text) {
+        if (!text) return '<span style="color:#94a3b8;">내용 없음</span>';
+        try { return marked.parse(text); } catch { return esc(text); }
+    }
+
+    function formatDate(dt) {
+        if (!dt) return '-';
+        return dt.replace('T', ' ').substring(0, 19);
+    }
+
+    function esc(str) {
+        if (!str) return '';
+        return str.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    fetchData();
+</script>
+
+</body>
+</html>

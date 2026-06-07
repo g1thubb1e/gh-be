@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Chat Test Page</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f5f7f9;
+            --border-color: #d1d5db;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h2 { color: #333; margin-top: 0; }
+
+        .config-section {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--bg-color);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label { font-weight: bold; font-size: 14px; color: #555; }
+
+        input, textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        button:hover { background-color: #357abd; }
+
+        /* 결과 섹션 스타일 */
+        #result-container {
+            margin-top: 20px;
+            display: none; /* 결과가 있을 때만 표시 */
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            background: #e2e8f0;
+            margin-right: 10px;
+        }
+
+        .answer-box {
+            background: #f8fafc;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            white-space: pre-wrap; /* \n 반영 */
+            line-height: 1.6;
+            margin: 15px 0;
+            color: #1e293b;
+        }
+
+        .source-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .source-tag {
+            font-size: 11px;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #edf2f7;
+            margin-bottom: 5px;
+            display: inline-block;
+        }
+
+        .loading { color: var(--primary-color); font-weight: bold; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚀 Query API Tester</h2>
+
+    <div class="config-section">
+        <div class="input-group">
+            <label>API URL</label>
+            <input type="text" id="apiUrl" value="http://localhost:8080/api/v1/query/retrieve">
+        </div>
+        <div class="input-group">
+            <label>Arch ID</label>
+            <input type="text" id="archId" value="ahmedkhaleel2004__gitdiagram">
+        </div>
+        <div class="input-group">
+            <label>Question</label>
+            <textarea id="question" rows="3">이 프로젝트의 github 관련된 부분 설명해주세요</textarea>
+        </div>
+        <button onclick="sendQuery()">질의 보내기</button>
+    </div>
+
+    <div id="loading" class="loading">요청 중...</div>
+
+    <div id="result-container">
+        <h3>Response Results</h3>
+
+        <div>
+            <span id="intent-badge" class="status-badge">INTENT</span>
+            <span id="truncated-badge" class="status-badge">TRUNCATED</span>
+        </div>
+
+        <div class="answer-box" id="answer-text"></div>
+
+        <h4>Sources</h4>
+        <div id="sources-list"></div>
+    </div>
+</div>
+
+<script>
+    async function sendQuery() {
+        const url = document.getElementById('apiUrl').value;
+        const question = document.getElementById('question').value;
+        const archId = document.getElementById('archId').value;
+
+        const loading = document.getElementById('loading');
+        const resultContainer = document.getElementById('result-container');
+
+        // UI 초기화
+        loading.style.display = 'block';
+        resultContainer.style.display = 'none';
+
+        const payload = {
+            question: question,
+            archId: archId
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error('서버 응답 오류');
+
+            const data = await response.json();
+            renderResponse(data);
+        } catch (error) {
+            alert('에러 발생: ' + error.message);
+            console.error(error);
+        } finally {
+            loading.style.display = 'none';
+        }
+    }
+
+    function renderResponse(data) {
+        const resultContainer = document.getElementById('result-container');
+        resultContainer.style.display = 'block';
+
+        // 메타 데이터 채우기
+        document.getElementById('intent-badge').innerText = `Intent: ${data.intent}`;
+        document.getElementById('truncated-badge').innerText = `Truncated: ${data.truncated}`;
+        document.getElementById('truncated-badge').style.color = data.truncated ? 'red' : 'green';
+
+        // --- 수정된 부분: JSON 포맷 문자열 처리 ---
+        const answerBox = document.getElementById('answer-text');
+        try {
+            // answer가 JSON 문자열인 경우 객체로 변환
+            const parsedAnswer = JSON.parse(data.answer);
+
+            // JSON 데이터를 보기 좋게 문자열로 변환 (들여쓰기 2칸)
+            // 만약 특정 필드(예: parsedAnswer.content)만 보여주고 싶다면 해당 필드를 지정하세요.
+            answerBox.innerText = JSON.stringify(parsedAnswer, null, 2);
+
+            // 만약 JSON 내부의 특정 텍스트 필드만 추출하고 싶다면 아래와 같이 수정 가능합니다:
+            // answerBox.innerText = parsedAnswer.text || parsedAnswer.message || JSON.stringify(parsedAnswer);
+
+        } catch (e) {
+            // JSON 형식이 아니거나 파싱 실패 시 일반 텍스트로 출력
+            console.warn("answer가 JSON 형식이 아닙니다. 일반 텍스트로 처리합니다.");
+            answerBox.innerText = data.answer;
+        }
+        // ---------------------------------------
+
+        // 출처(Sources) 리스트 생성
+        const sourcesList = document.getElementById('sources-list');
+        sourcesList.innerHTML = '';
+
+        if (data.sources && data.sources.length > 0) {
+            data.sources.forEach(src => {
+                const card = document.createElement('div');
+                card.className = 'source-card';
+                card.innerHTML = `
+                    <div class="source-tag">${src.type}</div>
+                    <div style="font-weight:bold; margin-bottom:5px;">${src.label}</div>
+                    <div style="font-size:12px; color: #666; font-family: monospace; margin-bottom:5px;">ID: ${src.id}</div>
+                    <div style="color: #444;">${src.snippet}</div>
+                `;
+                sourcesList.appendChild(card);
+            });
+        } else {
+            sourcesList.innerHTML = '<p>출처가 없습니다.</p>';
+        }
+    }
+</script>
+
+</body>
+</html>

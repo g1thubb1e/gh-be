@@ -1,0 +1,152 @@
+apiVersion: apps/v1 # 이 Deployment를 apps 그룹의 v1 규격으로 처리하라”는 쿠버네티스 API 버전 지정
+kind: Deployment
+metadata:
+  name: be # cli로 관리 할 때 사용하기 위한 이름
+  namespace: githubble
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: be-app # 아래 app의 이름과 동일해야 한다.  -> 자기가 관리할 pod 선택 기준
+  template:
+    metadata:
+      labels:
+        app: be-app # 서비스의 selector.app과 연결 -> 내가 생성하는 pod에 라벨을 붙이겠다는 의미
+    spec:
+      containers:
+        - name: app
+          image: jjwon1230/githubble-be:latest # TODO: 우리 백엔드 이미지로 변경 필요
+          ports:
+            - containerPort: 8080
+          env:
+            - name: GH_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: GH_CLIENT_ID
+
+            - name: GH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: GH_CLIENT_SECRET
+
+            - name: GH_REDIRECT_URI
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: GH_REDIRECT_URI
+
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: OPENROUTER_API_KEY
+
+            - name: AI_PRIMARY_BASE_URL
+              value: "https://openrouter.ai/api/v1"
+
+            - name: AI_PRIMARY_MODEL_NAME
+              value: "deepseek/deepseek-v4-flash"
+
+            - name: AI_FALLBACK_ENABLED
+              value: "true"
+
+            - name: AI_EMBEDDING_BASE_URL
+              value: "https://openrouter.ai/api/v1"
+
+            - name: AI_EMBEDDING_MODEL_NAME
+              value: "openai/text-embedding-3-large"
+
+            - name: AI_EMBEDDING_DIMENSION
+              value: "3072"
+
+            - name: PGVECTOR_URL
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: PGVECTOR_URL
+
+            - name: PGVECTOR_USER
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: PGVECTOR_USER
+
+            - name: PGVECTOR_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: PGVECTOR_PASSWORD
+
+            - name: NEO4J_URL
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: NEO4J_URL
+
+            - name: NEO4J_USER
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: NEO4J_USER
+
+            - name: NEO4J_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: NEO4J_PASSWORD
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: JWT_SECRET
+
+            - name: FE_BASEURL
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: FE_BASEURL
+
+            - name: FE_LANDING_PAGE
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: FE_LANDING_PAGE
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: AWS_ACCESS_KEY_ID
+
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: AWS_SECRET_ACCESS_KEY
+
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: AWS_REGION
+
+            - name: S3_ARTIFACT_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: S3_ARTIFACT_BUCKET
+
+            - name: AI_SERVER_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: AI_SERVER_BASE_URL
+
+            - name: AI_SERVER_GENERATE_PATH
+              valueFrom:
+                secretKeyRef:
+                  name: githubble-secret
+                  key: AI_SERVER_GENERATE_PATH

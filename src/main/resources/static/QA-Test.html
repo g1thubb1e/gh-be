@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA 피드백 테스트 v2</title>
+    <!-- 마크다운 파싱을 위한 라이브러리 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+          --primary: #2563eb;        /* 파란색 (A 테마) */
+          --primary-hover: #1d4ed8;
+          --secondary: #16a34a;      /* 초록색 (B 테마) */
+          --secondary-hover: #15803d;
+          --success: #10b981;
+          --bg: #f8fafc;
+          --card-bg: #ffffff;
+          --text-main: #1e293b;
+          --text-muted: #64748b;
+          --border: #e2e8f0;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+          font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
+          background: var(--bg);
+          color: var(--text-main);
+          line-height: 1.6;
+          min-height: 100vh;
+        }
+
+        /* ── 상단 패널 ── */
+        .top-panel {
+          background: var(--card-bg);
+          border-bottom: 1px solid var(--border);
+          padding: 1.2rem 1.5rem;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .top-inner {
+          max-width: 1280px;
+          margin: 0 auto;
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+        }
+
+        .diagram-thumb {
+          width: 100px;
+          height: 64px;
+          flex-shrink: 0;
+          cursor: zoom-in;
+          border-radius: 0.5rem;
+          overflow: hidden;
+          border: 1px solid var(--border);
+          transition: transform 0.2s;
+        }
+        .diagram-thumb:hover { transform: scale(1.03); }
+        .diagram-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+        .question-box { flex: 1; }
+        .question-box h1 { font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; }
+
+        .input-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+        select, .custom-name-input {
+          padding: 0.5rem 0.75rem;
+          border: 1px solid var(--border);
+          border-radius: 0.5rem;
+          font-size: 0.9rem;
+          outline: none;
+          background-color: #fff;
+        }
+        select:focus, .custom-name-input:focus { border-color: var(--primary); }
+
+        input[type="text"]#question-input {
+          flex: 1;
+          min-width: 300px;
+          padding: 0.5rem 1rem;
+          border: 1px solid var(--border);
+          border-radius: 0.5rem;
+          font-size: 0.9rem;
+          outline: none;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input[type="text"]#question-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+
+        .q-display-chip {
+          background: #f1f5f9;
+          padding: 0.5rem 1rem;
+          border-radius: 0.5rem;
+          display: none;
+          align-items: center;
+          gap: 0.75rem;
+          border-left: 4px solid var(--primary);
+        }
+        .q-display-chip .label { font-size: 0.7rem; font-weight: 700; color: var(--primary); }
+        .q-display-chip .text { font-size: 0.9rem; font-weight: 500; }
+
+        /* ── 스텝 ── */
+        .main-content {
+          max-width: 1280px;
+          margin: 2rem auto;
+          padding: 0 1.5rem 5rem;
+        }
+
+        .step-bar {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 2.5rem;
+          position: relative;
+        }
+        .step-item {
+          flex: 1;
+          text-align: center;
+          position: relative;
+          z-index: 1;
+          color: var(--text-muted);
+          font-size: 0.85rem;
+          font-weight: 600;
+        }
+        .step-item.active { color: var(--primary); }
+        .step-item.done { color: var(--success); }
+        .step-circle {
+          width: 28px; height: 28px;
+          background: #e2e8f0;
+          border-radius: 50%;
+          margin: 0 auto 0.5rem;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 0.75rem; font-weight: 800; color: #fff;
+        }
+        .step-item.active .step-circle { background: var(--primary); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+        .step-item.done .step-circle { background: var(--success); }
+
+        .step-line {
+          position: absolute; top: 14px; left: 0; right: 0;
+          height: 2px; background: #e2e8f0; z-index: 0;
+          width: 66%; margin: 0 auto;
+        }
+
+        /* ── 공통 카드 ── */
+        .card {
+          background: var(--card-bg);
+          border-radius: 1rem;
+          padding: 2rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .hidden { display: none !important; }
+
+        /* ── 로딩 ── */
+        .loader-wrap { text-align: center; padding: 4rem 0; }
+        .spinner {
+          width: 40px; height: 40px;
+          border: 3px solid #f1f5f9;
+          border-top-color: var(--primary);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 0 auto 1.5rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── 비교 섹션 ── */
+        .compare-header { margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.7rem; font-weight: 700; background: #ebf5ff; color: var(--primary); }
+        .badge-secondary { background: #f0fdf4; color: var(--secondary); }
+        .badge-info { background: #f1f5f9; color: #475569; } /* 응답 시간 배지용 */
+
+        .compare-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 2rem;
+        }
+
+        .answer-card {
+          border: 2px solid var(--border);
+          border-radius: 0.75rem;
+          padding: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          transition: all 0.2s;
+        }
+        .answer-card:hover { border-color: #cbd5e1; }
+        .answer-card.selected-a { border-color: var(--primary); background: #f0f7ff; }
+        .answer-card.selected-b { border-color: var(--secondary); background: #f0fdf4; }
+
+        .answer-title-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .answer-title { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+        .title-a { color: var(--primary); }
+        .title-b { color: var(--secondary); }
+
+        /* ── 마크다운 상세 스타일 ── */
+        .answer-body {
+          font-size: 0.92rem;
+          color: #334155;
+          min-height: 150px;
+          max-height: 500px;
+          overflow-y: auto;
+          padding-right: 0.75rem;
+        }
+        .answer-body::-webkit-scrollbar { width: 5px; }
+        .answer-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+
+        .answer-body p { margin-bottom: 1rem; }
+        .answer-body strong { color: #0f172a; font-weight: 700; }
+        .answer-body code {
+          background: #f1f5f9;
+          padding: 0.15rem 0.4rem;
+          border-radius: 0.25rem;
+          font-size: 0.85em;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          color: #475569;
+        }
+        .answer-body table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 1.25rem 0;
+          font-size: 0.82rem;
+          line-height: 1.4;
+        }
+        .answer-body th, .answer-body td {
+          border: 1px solid #e2e8f0;
+          padding: 0.6rem 0.75rem;
+          text-align: left;
+          word-break: keep-all;
+        }
+        .answer-body th { background: #f8fafc; font-weight: 700; color: #475569; }
+        .answer-body tr:nth-child(even) { background: #f9fafb; }
+        .answer-body ul, .answer-body ol { margin: 1rem 0 1rem 1.2rem; }
+        .answer-body li { margin-bottom: 0.4rem; }
+
+        /* ── 메타데이터 ── */
+        .answer-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+          align-items: center;
+          padding: 0.6rem 0.75rem;
+          background: #f8fafc;
+          border-radius: 0.5rem;
+          border: 1px solid var(--border);
+          font-size: 0.8rem;
+        }
+        .meta-label { color: var(--text-muted); font-weight: 600; margin-right: 0.3rem; }
+        .meta-chip {
+          display: inline-flex; align-items: center; gap: 0.25rem;
+          padding: 0.2rem 0.6rem;
+          border-radius: 1rem;
+          font-size: 0.72rem; font-weight: 700;
+          background: #e0e7ff; color: #3730a3;
+        }
+        .meta-chip.top { background: #fef3c7; color: #92400e; }
+        .meta-chip.key { background: #f0fdf4; color: #15803d; }
+        .meta-chip.warn { background: #fee2e2; color: #991b1b; }
+        .meta-divider { color: var(--border); }
+
+        /* ── 평가 섹션 ── */
+        .score-buttons { display: flex; justify-content: space-between; gap: 0.4rem; margin-top: 1rem; }
+        .score-btn {
+          flex: 1; aspect-ratio: 1;
+          border: 1px solid var(--border);
+          background: #fff;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          font-weight: 700;
+          font-size: 0.9rem;
+          transition: all 0.15s;
+        }
+        .score-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        .score-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; transform: scale(1.1); z-index: 10; }
+        .score-btn.active-secondary { background: var(--secondary); border-color: var(--secondary); color: #fff; transform: scale(1.1); z-index: 10; }
+
+        textarea {
+          width: 100%; min-height: 100px; padding: 1rem;
+          border: 1px solid var(--border); border-radius: 0.5rem;
+          margin: 1.5rem 0; font-family: inherit; font-size: 0.92rem;
+          resize: vertical; outline: none;
+        }
+        textarea:focus { border-color: var(--primary); }
+
+        /* ── 버튼 유틸 ── */
+        .btn {
+          padding: 0.7rem 1.4rem;
+          border: none; border-radius: 0.5rem;
+          font-weight: 700; font-size: 0.88rem;
+          cursor: pointer; transition: all 0.2s;
+          display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary { background: var(--secondary); color: #fff; }
+        .btn-secondary:hover { background: var(--secondary-hover); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+        .btn-select { min-width: 160px; }
+
+        /* ── 모달 ── */
+        #img-modal {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+          display: none; z-index: 2000;
+          padding: 2rem;
+          overflow-y: auto;
+        }
+        #img-modal.active { display: flex; justify-content: center; align-items: flex-start; }
+        .modal-content { max-width: 95%; margin: auto; position: relative; }
+        .modal-content img { width: 100%; height: auto; display: block; border-radius: 0.5rem; }
+        .close-modal { position: absolute; top: -1.5rem; right: -0.5rem; color: #fff; cursor: pointer; font-size: 2rem; }
+
+        /* ── 완료 화면 ── */
+        .success-screen { text-align: center; padding: 3rem 0; }
+        .success-icon {
+          width: 56px; height: 56px; background: #dcfce7; color: var(--success);
+          border-radius: 50%; display: flex; align-items: center; justify-content: center;
+          margin: 0 auto 1.5rem; font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<div id="img-modal" onclick="closeModal()">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <img src="./test_diagram.png" alt="전체 다이어그램">
+    </div>
+</div>
+
+<header class="top-panel">
+    <div class="top-inner">
+        <div class="diagram-thumb" onclick="openModal()">
+            <img src="./test_diagram.png" alt="다이어그램 썸네일">
+        </div>
+        <div class="question-box">
+            <h1>QA 피드백 플랫폼</h1>
+            <div id="q-input-wrap" class="input-group">
+                <select id="questioner-select" onchange="toggleCustomNameInput()">
+                    <option value="">질문자 선택</option>
+                    <option value="허성지">허성지</option>
+                    <option value="황정민">황정민</option>
+                    <option value="우기주">우기주</option>
+                    <option value="곽영헌">곽영헌</option>
+                    <option value="문지원">문지원</option>
+                    <option value="이서영">이서영</option>
+                    <option value="기타">기타</option>
+                </select>
+                <input type="text" id="custom-name-input" class="custom-name-input hidden" placeholder="이름 입력" onkeydown="if(event.key === 'Enter') handleAsk()">
+
+                <input type="text" id="question-input" placeholder="질문을 입력하세요..." value="이 프로젝트의 주요 컴포넌트를 설명해주세요" onkeydown="if(event.key === 'Enter') handleAsk()">
+                <button class="btn btn-primary" onclick="handleAsk()">질문하기</button>
+            </div>
+            <div id="q-display" class="q-display-chip">
+                <span class="label" id="q-questioner-label">질문자</span>
+                <span class="text" id="q-display-text"></span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="main-content">
+    <div class="step-bar">
+        <div class="step-line"></div>
+        <div class="step-item active" id="step-1"><div class="step-circle">1</div><span>답변 생성</span></div>
+        <div class="step-item" id="step-2"><div class="step-circle">2</div><span>답변 비교</span></div>
+        <div class="step-item" id="step-3"><div class="step-circle">3</div><span>상세 평가</span></div>
+    </div>
+
+    <div id="loading-area" class="loader-wrap hidden">
+        <div class="spinner"></div>
+        <p style="font-size: 0.9rem; color: var(--text-muted);">AI가 답변을 구성하고 있습니다...</p>
+    </div>
+
+    <div id="compare-area" class="card hidden">
+        <div class="compare-header">
+            <div>
+                <h2 style="font-size: 1.1rem; font-weight: 700;">의도에 더 적합한 답변을 선택해 주세요</h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">두 모델의 품질을 비교한 후 하나를 선택하면 A, B 개별 평가가 진행됩니다.</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <span class="badge badge-info" id="time-badge">소요 시간: 0.0s</span>
+                <span class="badge" id="route-badge">Route: -</span>
+            </div>
+        </div>
+
+        <div class="compare-grid">
+            <div class="answer-card" id="card-a">
+                <div class="answer-title-row">
+                    <div class="answer-title title-a">Answer A: GraphRAG</div>
+                    <button class="btn btn-primary btn-select" onclick="selectChoice('A')">이 답변(A) 선택</button>
+                </div>
+                <div id="meta-a" class="answer-meta hidden"></div>
+                <div id="text-a" class="answer-body"></div>
+            </div>
+
+            <div class="answer-card" id="card-b">
+                <div class="answer-title-row">
+                    <div class="answer-title title-b">Answer B: Vector RAG</div>
+                    <button class="btn btn-secondary btn-select" onclick="selectChoice('B')">이 답변(B) 선택</button>
+                </div>
+                <div id="meta-b" class="answer-meta hidden"></div>
+                <div id="text-b" class="answer-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="rating-area" class="card hidden">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+            <h2 id="eval-title">시스템 답변 평가 (1/2)</h2>
+            <span class="badge" id="eval-target-badge">평가 대상: -</span>
+        </div>
+        <p id="eval-desc" style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">이 답변의 신뢰도와 정확성을 평가해 주세요.</p>
+
+        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid var(--border); position: relative;">
+            <div id="eval-ans-text" class="answer-body" style="height: auto; max-height: 400px;"></div>
+            <button class="btn btn-outline" onclick="copyAnswer()" style="position: absolute; top: 0.75rem; right: 0.75rem; padding: 0.4rem 0.8rem; font-size: 0.7rem;">내용 복사</button>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">만족도 점수</label>
+            <div class="score-buttons"></div>
+            <div style="display: flex; justify-content: space-between; margin-top: 0.6rem; font-size: 0.75rem; color: var(--text-muted);">
+                <span>부정확함</span>
+                <span>매우 정확함</span>
+            </div>
+        </div>
+
+        <textarea id="comment-input" placeholder="답변에 대한 의견을 남겨주세요."></textarea>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button id="eval-back-btn" class="btn btn-outline" onclick="handleEvalBack()">이전 단계</button>
+            <button class="btn btn-primary" id="submit-feedback-btn" onclick="handleSubmitStep()">다음 평가 (A → B)</button>
+        </div>
+    </div>
+
+    <div id="done-area" class="card hidden">
+        <div class="success-screen">
+            <div class="success-icon">✓</div>
+            <h2 style="font-size: 1.4rem; margin-bottom: 0.5rem;">모든 피드백이 접수되었습니다</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem;">답변 비교 및 A/B 개별 평가 결과가 모델 개선에 활용됩니다.</p>
+            <button class="btn btn-primary" onclick="resetApp()">새 질문 하기</button>
+        </div>
+    </div>
+</main>
+
+<script>
+    const ARCH_ID = 'ahmedkhaleel2004__gitdiagram';
+    const BASE_URL = 'http://70.12.246.38:8080/api';
+
+    let state = {
+      question: '',
+      questioner: '',
+      answerA: null,
+      answerB: null,
+      route: '',
+      responseTime: 0,
+      selected: '',
+      currentEvaluating: 'A',
+      score: 0
+    };
+
+    marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
+
+    window.onload = () => {
+      initScoreButtons();
+    };
+
+    function initScoreButtons() {
+      const container = document.querySelector('.score-buttons');
+      container.innerHTML = '';
+      for (let i = 1; i <= 10; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'score-btn';
+        btn.innerText = i;
+        btn.onclick = () => setScore(i);
+        container.appendChild(btn);
+      }
+    }
+
+    function setScore(s) {
+      state.score = s;
+      const activeClass = state.currentEvaluating === 'A' ? 'active' : 'active-secondary';
+      document.querySelectorAll('.score-btn').forEach((btn, idx) => {
+        btn.classList.remove('active', 'active-secondary');
+        if (idx + 1 === s) btn.classList.add(activeClass);
+      });
+    }
+
+    function toggleCustomNameInput() {
+      const select = document.getElementById('questioner-select');
+      const customInput = document.getElementById('custom-name-input');
+      customInput.classList.toggle('hidden', select.value !== '기타');
+    }
+
+    function switchView(viewId) {
+      const views = ['loading-area', 'compare-area', 'rating-area', 'done-area'];
+      views.forEach(v => document.getElementById(v).classList.add('hidden'));
+      if (viewId) document.getElementById(viewId).classList.remove('hidden');
+
+      const stepMap = { 'loading-area': 1, 'compare-area': 2, 'rating-area': 3, 'done-area': 3 };
+      const currentStep = stepMap[viewId] || 1;
+
+      for (let i = 1; i <= 3; i++) {
+        const el = document.getElementById(`step-${i}`);
+        el.classList.remove('active', 'done');
+        if (i < currentStep) el.classList.add('done');
+        if (i === currentStep) el.classList.add('active');
+      }
+    }
+
+    function openModal() {
+      document.getElementById('img-modal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+      document.getElementById('img-modal').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    async function handleAsk() {
+      const select = document.getElementById('questioner-select');
+      const customInput = document.getElementById('custom-name-input');
+      const input = document.getElementById('question-input');
+
+      const q = input.value.trim();
+      let questioner = select.value === '기타' ? customInput.value.trim() : select.value;
+
+      if (!questioner) { alert('질문자를 선택하거나 이름을 입력해주세요.'); return; }
+      if (!q) { alert('질문을 입력해주세요.'); return; }
+
+      state.question = q;
+      state.questioner = questioner;
+
+      document.getElementById('q-questioner-label').innerText = `질문자: ${questioner}`;
+      document.getElementById('q-display-text').innerText = q;
+      document.getElementById('q-input-wrap').style.display = 'none';
+      document.getElementById('q-display').style.display = 'flex';
+
+      switchView('loading-area');
+
+      const startTime = performance.now();
+
+      try {
+        const res = await fetch(`${BASE_URL}/v1/agent/qa-answer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: q,
+            archId: ARCH_ID
+          })
+        });
+
+        const data = await res.json();
+
+        const endTime = performance.now();
+        state.responseTime = ((endTime - startTime) / 1000).toFixed(1);
+
+        state.answerA = data.answerA;
+        state.answerB = data.answerB;
+        state.route = data.route || 'DEFAULT';
+
+        renderAnswer('text-a', state.answerA?.answer);
+        renderAnswer('text-b', state.answerB?.answer);
+        renderMeta('meta-a', state.answerA);
+        renderMeta('meta-b', state.answerB);
+
+        document.getElementById('time-badge').innerText = `소요 시간: ${state.responseTime}s`;
+        document.getElementById('route-badge').innerText = `Route: ${state.route}`;
+
+        switchView('compare-area');
+      } catch (err) {
+        alert('오류가 발생했습니다: ' + err.message);
+        resetApp();
+      }
+    }
+
+    async function selectChoice(choice) {
+      state.selected = choice;
+      document.getElementById('card-a').classList.toggle('selected-a', choice === 'A');
+      document.getElementById('card-b').classList.toggle('selected-b', choice === 'B');
+
+      fetch(`${BASE_URL}/v1/feedback/compare`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: state.question,
+          archId: ARCH_ID,
+          selectedAnswer: choice,
+          answerA: state.answerA?.answer,
+          answerB: state.answerB?.answer,
+          questioner: state.questioner,
+          responseTime: state.responseTime
+        })
+      }).catch(console.error);
+
+      setTimeout(() => startEvaluation('A'), 200);
+    }
+
+    function startEvaluation(target) {
+      state.currentEvaluating = target;
+      state.score = 0;
+
+      document.getElementById('comment-input').value = '';
+      document.querySelectorAll('.score-btn').forEach(b => b.classList.remove('active', 'active-secondary'));
+
+      const isA = target === 'A';
+      const targetData = isA ? state.answerA : state.answerB;
+      const targetName = isA ? 'GraphRAG (A)' : 'Vector RAG (B)';
+
+      document.getElementById('eval-title').innerText = isA ? "상세 평가 (1/2: 답변 A)" : "상세 평가 (2/2: 답변 B)";
+      document.getElementById('eval-target-badge').innerText = `평가 대상: ${targetName}`;
+      document.getElementById('eval-target-badge').className = isA ? 'badge' : 'badge badge-secondary';
+
+      const submitBtn = document.getElementById('submit-feedback-btn');
+      submitBtn.innerText = isA ? '다음: 답변 B 평가하기' : '모든 평가 완료 및 제출';
+      submitBtn.className = isA ? 'btn btn-primary' : 'btn btn-secondary';
+
+      renderAnswer('eval-ans-text', targetData?.answer || '');
+      switchView('rating-area');
+    }
+
+    async function handleSubmitStep() {
+      if (state.score === 0) { alert('점수를 선택해 주세요!'); return; }
+
+      const target = state.currentEvaluating;
+      const isA = target === 'A';
+      const answerText = isA ? state.answerA?.answer : state.answerB?.answer;
+      // 요청하신 대로 A는 graph, B는 vector 타입을 추가합니다.
+      const feedbackType = isA ? "graph" : "vector";
+
+      try {
+        await fetch(`${BASE_URL}/v1/feedback/rate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: state.question,
+            archId: ARCH_ID,
+            score: state.score,
+            answer: answerText,
+            comment: document.getElementById('comment-input').value,
+            questioner: state.questioner,
+            responseTime: state.responseTime,
+            type: feedbackType // 추가된 필드
+          })
+        });
+
+        if (isA) {
+          startEvaluation('B');
+        } else {
+          switchView('done-area');
+        }
+      } catch (err) {
+        alert('평가 제출 중 오류가 발생했습니다: ' + err.message);
+      }
+    }
+
+    function handleEvalBack() {
+      if (state.currentEvaluating === 'B') {
+        startEvaluation('A');
+      } else {
+        switchView('compare-area');
+      }
+    }
+
+    function resetApp() {
+      state = { question: '', questioner: '', answerA: null, answerB: null, route: '', responseTime: 0, selected: '', currentEvaluating: 'A', score: 0 };
+      document.getElementById('question-input').value = '';
+      document.getElementById('comment-input').value = '';
+      document.getElementById('questioner-select').value = '';
+      document.getElementById('custom-name-input').value = '';
+      document.getElementById('custom-name-input').classList.add('hidden');
+      document.getElementById('q-input-wrap').style.display = 'flex';
+      document.getElementById('q-display').style.display = 'none';
+      document.getElementById('card-a').classList.remove('selected-a');
+      document.getElementById('card-b').classList.remove('selected-b');
+      switchView(null);
+    }
+
+    function copyAnswer() {
+      const text = document.getElementById('eval-ans-text').innerText;
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      const copyBtn = document.querySelector('[onclick="copyAnswer()"]');
+      copyBtn.innerText = '복사 완료';
+      setTimeout(() => copyBtn.innerText = '내용 복사', 2000);
+    }
+
+    function renderMeta(id, data) {
+      const el = document.getElementById(id);
+      if (!data) { el.classList.add('hidden'); return; }
+
+      const parts = [];
+
+      if (data.intent) {
+        parts.push(`<span class="meta-label">Intent</span><span class="meta-chip">${data.intent}</span>`);
+      }
+      if (data.topNode) {
+        parts.push(`<span class="meta-divider">|</span><span class="meta-label">Top</span><span class="meta-chip top">${data.topNode}</span>`);
+      }
+      if (data.keyNodes?.length) {
+        parts.push(`<span class="meta-divider">|</span><span class="meta-label">Key Nodes</span>`);
+        data.keyNodes.forEach(n => parts.push(`<span class="meta-chip key">${n}</span>`));
+      }
+      if (data.truncated) {
+        parts.push(`<span class="meta-divider">|</span><span class="meta-chip warn">응답 잘림</span>`);
+      }
+
+      el.innerHTML = parts.join('');
+      el.classList.remove('hidden');
+    }
+
+    function renderAnswer(id, text) {
+      const el = document.getElementById(id);
+      if (!text) { el.innerHTML = '<span style="color: #94a3b8;">표시할 답변이 없습니다.</span>'; return; }
+      try {
+        el.innerHTML = marked.parse(text);
+      } catch (e) {
+        el.innerText = text;
+      }
+    }
+</script>
+
+</body>
+</html>

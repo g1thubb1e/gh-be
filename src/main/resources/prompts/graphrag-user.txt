@@ -1,0 +1,7 @@
+다음은 저장소 아키텍처 그래프 데이터입니다.
+
+<context>
+{{context}}
+</context>
+
+질의: {{question}}

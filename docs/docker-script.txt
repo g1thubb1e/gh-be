@@ -1,0 +1,24 @@
+# pgvector Docker Script
+
+docker run -d `
+  --name my-pgvector `
+  --hostname 146535b69e9b `
+  -p 5432:5432 `
+  --env POSTGRES_PASSWORD=password `
+  --env PGDATA=/var/lib/postgresql/18/docker `
+  --volume pgdata_vol:/var/lib/postgresql `
+  --network bridge `
+  --restart no `
+  pgvector/pgvector:0.8.2-pg18-trixie
+
+# neo4j Docker Script - 현재 폴더 아래에 neo4j 폴더와 하위 폴더들이 있다고 가정
+
+docker run -d `
+  --name my-neo4j `
+  -p 7474:7474 -p 7687:7687 `
+  --env NEO4J_AUTH=neo4j/password `
+  -v "${PWD}/neo4j/data:/data" `
+  -v "${PWD}/neo4j/logs:/logs" `
+  -v "${PWD}/neo4j/import:/import" `
+  -v "${PWD}/neo4j/plugins:/plugins" `
+  neo4j:latest

@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress
+  namespace: githubble
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+    # cluster-issuer.yaml의 metadata의 이름을 가져옴
+    # cluster-issuer.yaml에서 정의한 방식으로 인증서를 발급받으라는 의미
+spec:
+  # 인증서 설정하여 https 접속을 가능하게 함
+  tls:
+    - hosts:
+        - githubble.site
+      secretName: gh-tls
+    - hosts:
+        - jenkins.githubble.site
+      secretName: jenkins-tls
+  rules:
+    # 젠킨스는 도메인 분리
+    - host: jenkins.githubble.site
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jenkins
+                port:
+                  number: 80
+    - host: githubble.site
+      http:
+        paths:
+          # 프론트엔드 서비스
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gh-fe
+                port:
+                  number: 80
+          # 백엔드 서비스
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: gh-be
+                port:
+                  number: 80

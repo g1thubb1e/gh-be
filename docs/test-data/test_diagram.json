@@ -1,0 +1,237 @@
+{
+  "username": "ahmedkhaleel2004",
+  "repo": "gitdiagram",
+  "attempt": 2,
+  "graph": {
+    "groups": [
+      {
+        "id": "client_presentation",
+        "label": "Client Presentation Layer",
+        "description": "The user-facing Next.js application responsible for UI rendering and initiating generation requests."
+      },
+      {
+        "id": "backend_core",
+        "label": "Generation Backend Core (FastAPI)",
+        "description": "The central Python service orchestrating data fetching, AI calls, state management, and validation."
+      },
+      {
+        "id": "external_services",
+        "label": "External Services & Data Sources",
+        "description": "Third-party APIs and cloud services used for persistence, intelligence, and raw data input."
+      }
+    ],
+    "nodes": [
+      {
+        "id": "nextjs_frontend",
+        "label": "Next.js Frontend UI",
+        "type": "Client Application",
+        "description": "Renders the interactive user interface, including diagram visualization and repository browsing components.",
+        "groupId": "client_presentation",
+        "path": "src/app",
+        "shape": "box"
+      },
+      {
+        "id": "api_routes_client",
+        "label": "Client API Routes (Next.js)",
+        "type": "API Endpoint",
+        "description": "Handles embedded generation calls and data fetching within the Vercel deployment boundary.",
+        "groupId": "client_presentation",
+        "path": "src/app/api",
+        "shape": "box"
+      },
+      {
+        "id": "fastapi_backend",
+        "label": "FastAPI Orchestrator",
+        "type": "Backend Service",
+        "description": "The main entry point for the robust, production-grade generation pipeline.",
+        "groupId": "backend_core",
+        "path": "backend/app/main.py",
+        "shape": "box"
+      },
+      {
+        "id": "github_fetcher",
+        "label": "GitHub Data Fetching",
+        "type": "Data Ingestion Module",
+        "description": "Responsible for fetching raw repository metadata, file trees, and README content from GitHub API.",
+        "groupId": "backend_core",
+        "path": "backend/app/services/github_service.py",
+        "shape": "box"
+      },
+      {
+        "id": "prompt_manager",
+        "label": "Prompt Generation Logic",
+        "type": "Utility Service",
+        "description": "Structures and prepares contextually rich instructions for the external AI model.",
+        "groupId": "backend_core",
+        "path": "backend/app/prompts.py",
+        "shape": "box"
+      },
+      {
+        "id": "ai_orchestrator",
+        "label": "AI Service Orchestration",
+        "type": "API Client",
+        "description": "Coordinates calls to external LLM APIs (e.g., OpenAI) and manages model configuration.",
+        "groupId": "backend_core",
+        "path": "backend/app/services/openai_service.py",
+        "shape": "box"
+      },
+      {
+        "id": "graph_generator",
+        "label": "Graph Structure Logic",
+        "type": "Core Business Logic",
+        "description": "Takes raw data and AI output to structure the final architectural graph representation.",
+        "groupId": "backend_core",
+        "path": "backend/app/services/graph_service.py",
+        "shape": "box"
+      },
+      {
+        "id": "state_manager",
+        "label": "State & Quota Management",
+        "type": "Utility Service",
+        "description": "Checks usage quotas and tracks transient state using Redis.",
+        "groupId": "backend_core",
+        "path": "backend/app/services/complimentary_gate.py",
+        "shape": "box"
+      },
+      {
+        "id": "mermaid_validator",
+        "label": "Mermaid Validation Utility",
+        "type": "Validation Tool",
+        "description": "Ensures the generated Mermaid code is syntactically correct before final output.",
+        "groupId": "backend_core",
+        "path": "backend/scripts/validate_mermaid.mjs",
+        "shape": "hexagon"
+      },
+      {
+        "id": "github_api",
+        "label": "GitHub API",
+        "type": "External Data Source",
+        "description": "Source of raw repository metadata and file structure.",
+        "groupId": "external_services",
+        "path": null,
+        "shape": "database"
+      },
+      {
+        "id": "ai_model_provider",
+        "label": "AI Model Provider (OpenAI)",
+        "type": "External AI Service",
+        "description": "The external Large Language Model used for complex data interpretation and generation.",
+        "groupId": "external_services",
+        "path": null,
+        "shape": "circle"
+      },
+      {
+        "id": "redis_store",
+        "label": "Upstash Redis Store",
+        "type": "Cache/State Database",
+        "description": "High-speed storage for transient state, usage quotas, and session data.",
+        "groupId": "external_services",
+        "path": null,
+        "shape": "queue"
+      },
+      {
+        "id": "r2_storage",
+        "label": "Cloudflare R2 Artifact Store",
+        "type": "Object Storage",
+        "description": "The final, persistent storage for successful diagram artifacts and derived data.",
+        "groupId": "external_services",
+        "path": null,
+        "shape": "document"
+      }
+    ],
+    "edges": [
+      {
+        "from": "nextjs_frontend",
+        "to": "api_routes_client",
+        "label": "User Request",
+        "description": "Initiates the diagram generation process.",
+        "style": "solid"
+      },
+      {
+        "from": "api_routes_client",
+        "to": "fastapi_backend",
+        "label": "Generation Call",
+        "description": "Triggers the backend orchestration flow (Production Mode).",
+        "style": "solid"
+      },
+      {
+        "from": "fastapi_backend",
+        "to": "state_manager",
+        "label": "Check Quota/State",
+        "description": "Verifies user permissions and usage limits.",
+        "style": "solid"
+      },
+      {
+        "from": "state_manager",
+        "to": "redis_store",
+        "label": "Read/Write State",
+        "description": "Reads or updates the current generation state and quota count.",
+        "style": "solid"
+      },
+      {
+        "from": "fastapi_backend",
+        "to": "github_fetcher",
+        "label": "Fetch Raw Data",
+        "description": "Requests repository metadata from GitHub.",
+        "style": "solid"
+      },
+      {
+        "from": "github_fetcher",
+        "to": "github_api",
+        "label": "API Call",
+        "description": "Retrieves file tree, branches, and README content.",
+        "style": "solid"
+      },
+      {
+        "from": "fastapi_backend",
+        "to": "prompt_manager",
+        "label": "Contextual Prompting",
+        "description": "Prepares the instructions for the AI model based on fetched data.",
+        "style": "solid"
+      },
+      {
+        "from": "prompt_manager",
+        "to": "ai_orchestrator",
+        "label": "Instructions & Context",
+        "description": "Sends structured prompts to the AI service.",
+        "style": "solid"
+      },
+      {
+        "from": "ai_orchestrator",
+        "to": "ai_model_provider",
+        "label": "LLM API Call",
+        "description": "Requests complex data interpretation and graph generation logic.",
+        "style": "solid"
+      },
+      {
+        "from": "ai_model_provider",
+        "to": "graph_generator",
+        "label": "Raw Output Data",
+        "description": "Receives the initial structured output (e.g., JSON/Mermaid code).",
+        "style": "solid"
+      },
+      {
+        "from": "graph_generator",
+        "to": "mermaid_validator",
+        "label": "Code Validation",
+        "description": "Submits the generated Mermaid syntax for validation.",
+        "style": "solid"
+      },
+      {
+        "from": "mermaid_validator",
+        "to": "fastapi_backend",
+        "label": "Validated Code",
+        "description": "Returns confirmed, clean Mermaid code to the orchestrator.",
+        "style": "solid"
+      },
+      {
+        "from": "fastapi_backend",
+        "to": "r2_storage",
+        "label": "Save Artifact",
+        "description": "Commits the final diagram and metadata to permanent storage.",
+        "style": "solid"
+      }
+    ]
+  },
+  "rawText": "{\n  \"groups\": [\n    {\n      \"id\": \"client_presentation\",\n      \"label\": \"Client Presentation Layer\",\n      \"description\": \"The user-facing Next.js application responsible for UI rendering and initiating generation requests.\"\n    },\n    {\n      \"id\": \"backend_core\",\n      \"label\": \"Generation Backend Core (FastAPI)\",\n      \"description\": \"The central Python service orchestrating data fetching, AI calls, state management, and validation.\"\n    },\n    {\n      \"id\": \"external_services\",\n      \"label\": \"External Services & Data Sources\",\n      \"description\": \"Third-party APIs and cloud services used for persistence, intelligence, and raw data input.\"\n    }\n  ],\n  \"nodes\": [\n    {\n      \"id\": \"nextjs_frontend\",\n      \"label\": \"Next.js Frontend UI\",\n      \"type\": \"Client Application\",\n      \"description\": \"Renders the interactive user interface, including diagram visualization and repository browsing components.\",\n      \"groupId\": \"client_presentation\",\n      \"path\": \"src/app\",\n      \"shape\": \"box\"\n    },\n    {\n      \"id\": \"api_routes_client\",\n      \"label\": \"Client API Routes (Next.js)\",\n      \"type\": \"API Endpoint\",\n      \"description\": \"Handles embedded generation calls and data fetching within the Vercel deployment boundary.\",\n      \"groupId\": \"client_presentation\",\n      \"path\": \"src/app/api\",\n      \"shape\": \"box\"\n    },\n    {\n      \"id\": \"fastapi_backend\",\n      \"label\": \"FastAPI Orchestrator\",\n      \"type\": \"Backend Service\",\n      \"description\": \"The main entry point for the robust, production-grade generation pipeline.\",\n      \"groupId\": \"backend_core\",\n      \"path\": \"backend/app/main.py\",\n      \"shape\": \"box\"\n    },\n    {\n      \"id\": \"github_fetcher\",\n      \"label\": \"GitHub Data Fetching\",\n      \"type\": \"Data Ingestion Module\",\n      \"description\": \"Responsible for fetching raw repository metadata, file trees, and README content from GitHub API.\",\n      \"groupId\": \"backend_core\",\n      \"path\": \"backend/app/services/github_service.py\",\n      \"shape\": \"box\"\n    },\n    {\n      \"id\": \"prompt_manager\",\n      \"label\": \"Prompt Generation Logic\",\n      \"type\": \"Utility Service\",\n      \"description\": \"Structures and prepares contextually rich instructions for the external AI model.\",\n      \"groupId\": \"backend_core\",\n      \"path\": \"backend/app/prompts.py\",\n      \"shape\": \"box\"\n    },\n    {\n      \"id\": \"ai_orchestrator\",\n      \"label\": \"AI Service Orchestration\",\n      \"type\": \"API Client\",\n      \"description\": \"Coordinates calls to external LLM APIs (e.g., OpenAI) and manages model configuration.\",\n      \"groupId\": \"backend_core\",\n      \"path\": \"backend/app/services/openai_service.py\",\n      \"shape\": \"box\"\n    },\n    {\n      \"id\": \"graph_generator\",\n      \"label\": \"Graph Structure Logic\",\n      \"type\": \"Core Business Logic\",\n      \"description\": \"Takes raw data and AI output to structure the final architectural graph representation.\",\n      \"groupId\": \"backend_core\",\n      \"path\": \"backend/app/services/graph_service.py\",\n      \"shape\": \"box\"\n    },\n    {\n      \"id\": \"state_manager\",\n      \"label\": \"State & Quota Management\",\n      \"type\": \"Utility Service\",\n      \"description\": \"Checks usage quotas and tracks transient state using Redis.\",\n      \"groupId\": \"backend_core\",\n      \"path\": \"backend/app/services/complimentary_gate.py\",\n      \"shape\": \"box\"\n    },\n    {\n      \"id\": \"mermaid_validator\",\n      \"label\": \"Mermaid Validation Utility\",\n      \"type\": \"Validation Tool\",\n      \"description\": \"Ensures the generated Mermaid code is syntactically correct before final output.\",\n      \"groupId\": \"backend_core\",\n      \"path\": \"backend/scripts/validate_mermaid.mjs\",\n      \"shape\": \"hexagon\"\n    },\n    {\n      \"id\": \"github_api\",\n      \"label\": \"GitHub API\",\n      \"type\": \"External Data Source\",\n      \"description\": \"Source of raw repository metadata and file structure.\",\n      \"groupId\": \"external_services\",\n      \"path\": null,\n      \"shape\": \"database\"\n    },\n    {\n      \"id\": \"ai_model_provider\",\n      \"label\": \"AI Model Provider (OpenAI)\",\n      \"type\": \"External AI Service\",\n      \"description\": \"The external Large Language Model used for complex data interpretation and generation.\",\n      \"groupId\": \"external_services\",\n      \"path\": null,\n      \"shape\": \"circle\"\n    },\n    {\n      \"id\": \"redis_store\",\n      \"label\": \"Upstash Redis Store\",\n      \"type\": \"Cache/State Database\",\n      \"description\": \"High-speed storage for transient state, usage quotas, and session data.\",\n      \"groupId\": \"external_services\",\n      \"path\": null,\n      \"shape\": \"queue\"\n    },\n    {\n      \"id\": \"r2_storage\",\n      \"label\": \"Cloudflare R2 Artifact Store\",\n      \"type\": \"Object Storage\",\n      \"description\": \"The final, persistent storage for successful diagram artifacts and derived data.\",\n      \"groupId\": \"external_services\",\n      \"path\": null,\n      \"shape\": \"document\"\n    }\n  ],\n  \"edges\": [\n    {\n      \"from\": \"nextjs_frontend\",\n      \"to\": \"api_routes_client\",\n      \"label\": \"User Request\",\n      \"description\": \"Initiates the diagram generation process.\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"api_routes_client\",\n      \"to\": \"fastapi_backend\",\n      \"label\": \"Generation Call\",\n      \"description\": \"Triggers the backend orchestration flow (Production Mode).\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"fastapi_backend\",\n      \"to\": \"state_manager\",\n      \"label\": \"Check Quota/State\",\n      \"description\": \"Verifies user permissions and usage limits.\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"state_manager\",\n      \"to\": \"redis_store\",\n      \"label\": \"Read/Write State\",\n      \"description\": \"Reads or updates the current generation state and quota count.\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"fastapi_backend\",\n      \"to\": \"github_fetcher\",\n      \"label\": \"Fetch Raw Data\",\n      \"description\": \"Requests repository metadata from GitHub.\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"github_fetcher\",\n      \"to\": \"github_api\",\n      \"label\": \"API Call\",\n      \"description\": \"Retrieves file tree, branches, and README content.\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"fastapi_backend\",\n      \"to\": \"prompt_manager\",\n      \"label\": \"Contextual Prompting\",\n      \"description\": \"Prepares the instructions for the AI model based on fetched data.\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"prompt_manager\",\n      \"to\": \"ai_orchestrator\",\n      \"label\": \"Instructions & Context\",\n      \"description\": \"Sends structured prompts to the AI service.\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"ai_orchestrator\",\n      \"to\": \"ai_model_provider\",\n      \"label\": \"LLM API Call\",\n      \"description\": \"Requests complex data interpretation and graph generation logic.\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"ai_model_provider\",\n      \"to\": \"graph_generator\",\n      \"label\": \"Raw Output Data\",\n      \"description\": \"Receives the initial structured output (e.g., JSON/Mermaid code).\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"graph_generator\",\n      \"to\": \"mermaid_validator\",\n      \"label\": \"Code Validation\",\n      \"description\": \"Submits the generated Mermaid syntax for validation.\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"mermaid_validator\",\n      \"to\": \"fastapi_backend\",\n      \"label\": \"Validated Code\",\n      \"description\": \"Returns confirmed, clean Mermaid code to the orchestrator.\",\n      \"style\": \"solid\"\n    },\n    {\n      \"from\": \"fastapi_backend\",\n      \"to\": \"r2_storage\",\n      \"label\": \"Save Artifact\",\n      \"description\": \"Commits the final diagram and metadata to permanent storage.\",\n      \"style\": \"solid\"\n    }\n  ]\n}"
+}

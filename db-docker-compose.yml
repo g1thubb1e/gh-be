@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  pgvector:
+    image: pgvector/pgvector:0.8.2-pg18-trixie
+    container_name: my-pgvector
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/18/docker
+    volumes:
+      - ./docs/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./pg-vol:/var/lib/postgresql
+    restart: "no"
+
+  neo4j:
+    image: neo4j:2026.03.1
+    container_name: my-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/password
+    volumes:
+      - ./neo4j-vol/data:/data
+      - ./neo4j-vol/logs:/logs
+      - ./neo4j-vol/import:/import
+      - ./neo4j-vol/plugins:/plugins
+    restart: "no"

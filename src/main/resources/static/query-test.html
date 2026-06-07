@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>GraphRAG Query Test</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #222; background-color: #f3f4f6; }
+        h1 { font-size: 1.5rem; color: #111827; margin-bottom: 24px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+
+        .card { background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+
+        label { display: block; margin-bottom: 6px; font-size: 0.9rem; font-weight: 600; color: #374151; }
+        input[type="text"] {
+          width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px;
+          font-size: 0.95rem; margin-bottom: 16px; transition: border-color 0.2s;
+        }
+        input[type="text"]:focus { outline: none; border-color: #4f46e5; ring: 2px #4f46e5; }
+
+        .btn-row { display: flex; gap: 10px; margin-bottom: 20px; }
+        button {
+          padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;
+          font-size: 0.9rem; font-weight: 500; transition: opacity 0.2s;
+        }
+        #btn-query { background: #4f46e5; color: #fff; }
+        #btn-query:hover { background: #4338ca; }
+        #btn-query:disabled { background: #a5b4fc; cursor: not-allowed; }
+        #btn-clear { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+        #btn-clear:hover { background: #f9fafb; }
+
+        #status { font-size: 0.85rem; color: #6b7280; margin-bottom: 8px; min-height: 1.2em; font-style: italic; }
+
+        #output {
+          white-space: pre-wrap; word-break: break-word;
+          border: 1px solid #e5e7eb; border-radius: 8px;
+          padding: 18px; min-height: 200px; background: #fafafa;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          font-size: 1rem; line-height: 1.7; color: #1f2937;
+        }
+
+        #meta-container {
+          margin-top: 16px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px dashed #d1d5db;
+        }
+        .meta-item { display: block; font-size: 0.85rem; color: #4b5563; margin-bottom: 4px; }
+        .meta-label { font-weight: 600; color: #111827; margin-right: 6px; }
+        .tag { background: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px; display: inline-block; border: 1px solid #c7d2fe; }
+
+        .error-text { color: #dc2626; font-weight: 500; }
+    </style>
+</head>
+<body>
+
+<h1>GraphRAG Query Test</h1>
+
+<div class="card">
+    <label for="question">질문</label>
+    <input id="question" type="text" placeholder="예: 이 프로젝트의 주요 컴포넌트를 설명해주세요" value="Graph Structure Logic 에 대해서 알려주세요">
+
+    <label for="archId">Arch ID <small style="font-weight:normal;color:#6b7280">(생략 가능)</small></label>
+    <input id="archId" type="text" value="ahmedkhaleel2004__gitdiagram">
+
+    <div class="btn-row">
+        <button id="btn-query" onclick="sendQuery()">질문하기</button>
+        <button id="btn-clear" onclick="clearAll()">초기화</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="output"></div>
+
+    <div id="meta-container" style="display:none;">
+        <div id="meta-content"></div>
+    </div>
+</div>
+
+<script>
+    let controller = null;
+
+    async function sendQuery() {
+      const question = document.getElementById('question').value.trim();
+      const archId   = document.getElementById('archId').value.trim();
+
+      if (!question) { alert('질문을 입력하세요.'); return; }
+
+      resetDisplay();
+      setStatus('연결 중...');
+      document.getElementById('btn-query').disabled = true;
+
+      controller = new AbortController();
+
+      const body = { question };
+      if (archId) body.archId = archId;
+
+      try {
+        const res = await fetch('http://localhost:8080/api/v1/agent/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          showError('HTTP ' + res.status + ': ' + text);
+          return;
+        }
+
+        setStatus('답변 수신 중...');
+        const reader  = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer    = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine || !trimmedLine.startsWith('data:')) continue;
+
+            const raw = trimmedLine.slice(5).trim();
+            if (!raw) continue;
+
+            try {
+              const data = JSON.parse(raw);
+              handleEvent(data);
+            } catch (e) {
+              console.warn("JSON parse error:", e, raw);
+            }
+          }
+        }
+
+        if (buffer && buffer.trim().startsWith('data:')) {
+          const raw = buffer.trim().slice(5).trim();
+          try { handleEvent(JSON.parse(raw)); } catch (_) {}
+        }
+
+        setStatus('완료');
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          showError(e.message);
+        } else {
+          setStatus('취소됨');
+        }
+      } finally {
+        document.getElementById('btn-query').disabled = false;
+        controller = null;
+      }
+    }
+
+    /**
+     * SSE 이벤트 핸들러
+     * 복합적인 JSON 형식을 모두 지원하도록 수정
+     */
+    function handleEvent(evt) {
+      const outputDiv = document.getElementById('output');
+
+      // 1. 스트리밍 토큰 처리 (기존 'content' 필드와 'answer' 필드 모두 지원)
+      if (evt.type === 'token' && evt.content !== undefined) {
+        outputDiv.textContent += evt.content;
+      } else if (evt.answer !== undefined && evt.answer !== null) {
+        // answer 필드로 오는 경우도 누적 처리
+        outputDiv.textContent += evt.answer;
+      }
+
+      // 2. 메타데이터 처리 (데이터가 있을 때만 업데이트)
+      const hasMetadata = evt.intent || evt.topNode || (evt.keyNodes && evt.keyNodes.length > 0) || evt.truncated !== undefined;
+
+      if (hasMetadata) {
+        const metaContainer = document.getElementById('meta-container');
+        const metaContent = document.getElementById('meta-content');
+        metaContainer.style.display = 'block';
+
+        // 메타데이터가 들어올 때마다 새로 렌더링 (중복 방지를 위해 초기화 후 생성)
+        let metaHtml = '';
+
+        if (evt.intent) {
+          metaHtml += `<div class="meta-item"><span class="meta-label">의도(Intent):</span> <b>${evt.intent}</b></div>`;
+        }
+
+        if (evt.topNode) {
+          metaHtml += `<div class="meta-item"><span class="meta-label">주요 노드(Top):</span> <span class="tag">${evt.topNode}</span></div>`;
+        }
+
+        if (evt.keyNodes && evt.keyNodes.length > 0) {
+          const tags = evt.keyNodes.map(node => `<span class="tag">${node}</span>`).join('');
+          metaHtml += `<div class="meta-item"><span class="meta-label">핵심 컴포넌트:</span> ${tags}</div>`;
+        }
+
+        if (evt.truncated !== undefined) {
+          metaHtml += `<div class="meta-item"><span class="meta-label">내용 생략됨:</span> ${evt.truncated ? '예' : '아니오'}</div>`;
+        }
+
+        if (evt.resolvedArchId) {
+          metaHtml += `<div class="meta-item"><span class="meta-label">Arch ID:</span> ${evt.resolvedArchId}</div>`;
+        }
+
+        // 기존에 데이터가 있었다면 덮어씌움 (스트리밍 끝에 한 번에 오거나 업데이트되는 경우 대비)
+        if (metaHtml) {
+          metaContent.innerHTML = metaHtml;
+        }
+      }
+
+      // 3. 에러 케이스 처리
+      if (evt.type === 'error' || evt.error) {
+        showError(evt.message || evt.error);
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('output').innerHTML = `<span class="error-text">오류: ${escHtml(msg)}</span>`;
+      setStatus('중단됨');
+    }
+
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    function resetDisplay() {
+      document.getElementById('output').textContent = '';
+      document.getElementById('meta-content').innerHTML = '';
+      document.getElementById('meta-container').style.display = 'none';
+      setStatus('');
+    }
+
+    function clearAll() {
+      if (controller) { controller.abort(); controller = null; }
+      resetDisplay();
+      document.getElementById('question').value = '';
+    }
+
+    function escHtml(s) {
+      if (!s) return '';
+      return s.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+</script>
+</body>
+</html>
