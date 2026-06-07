@@ -1,39 +1,5 @@
 pipeline {
-    agent {
-        kubernetes {
-            yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  namespace: githubble
-spec:
-  serviceAccountName: jenkins
-  containers:
-    - name: kaniko
-      image: gcr.io/kaniko-project/executor:debug
-      command:
-        - cat
-      tty: true
-      volumeMounts:
-        - name: docker-config
-          mountPath: /kaniko/.docker
-
-    - name: kubectl
-      image: alpine/k8s:1.30.0
-      command:
-        - cat
-      tty: true
-
-  volumes:
-    - name: docker-config
-      secret:
-        secretName: dockerhub-secret
-        items:
-          - key: .dockerconfigjson
-            path: config.json
-"""
-        }
-    }
+    agent any
 
     options {
         timestamps()
@@ -41,10 +7,11 @@ spec:
     }
 
     environment {
-        IMAGE_REPO = 'jjwon1230/githubble-be'
+        IMAGE_REPO = 'yaongmeow/githubble-be'
         K8S_NAMESPACE = 'githubble'
         K8S_DEPLOYMENT = 'be'
         K8S_CONTAINER = 'app'
+        SSH_HOST = credentials('OCI_SERVER_2_HOST')
     }
 
     stages {
@@ -66,27 +33,32 @@ spec:
 
         stage('Build & Push Image') {
             steps {
-                container('kaniko') {
-                    sh """
-                    /kaniko/executor \
-                      --dockerfile=${WORKSPACE}/be/Dockerfile \
-                      --context=${WORKSPACE}/be \
-                      --destination=${FULL_IMAGE}
-                    """
+                withCredentials([usernamePassword(
+                    credentialsId: 'SUE_DOCKER',
+                    usernameVariable: 'ID',
+                    passwordVariable: 'PW'
+                )]) {
+                    sh '''
+                    echo "$PW" | docker login -u "$ID" --password-stdin
+                    docker build -f be/Dockerfile -t "$FULL_IMAGE" be
+                    docker push "$FULL_IMAGE"
+                    docker logout
+                    '''
                 }
             }
         }
 
         stage('Deploy') {
             steps {
-                container('kubectl') {
-                    sh """
-                    kubectl apply -f be/infra/be-deployment.yaml -n ${K8S_NAMESPACE}
-                    kubectl apply -f be/infra/be-service.yaml -n ${K8S_NAMESPACE}
-                    kubectl set image deployment/${K8S_DEPLOYMENT} ${K8S_CONTAINER}=${FULL_IMAGE} -n ${K8S_NAMESPACE}
-
-                    kubectl rollout status deployment/${K8S_DEPLOYMENT} -n ${K8S_NAMESPACE}
-                    """
+                sshagent(credentials: ['OCI_SERVER_2']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ubuntu@$SSH_HOST "sudo k3s kubectl apply -n '$K8S_NAMESPACE' -f -" < be/infra/be-deployment.yaml
+                    ssh -o StrictHostKeyChecking=no ubuntu@$SSH_HOST "sudo k3s kubectl apply -n '$K8S_NAMESPACE' -f -" < be/infra/be-service.yaml
+                    ssh -o StrictHostKeyChecking=no ubuntu@$SSH_HOST "
+                      sudo k3s kubectl set image deployment/'$K8S_DEPLOYMENT' '$K8S_CONTAINER'='$FULL_IMAGE' -n '$K8S_NAMESPACE' &&
+                      sudo k3s kubectl rollout status deployment/'$K8S_DEPLOYMENT' -n '$K8S_NAMESPACE'
+                    "
+                    '''
                 }
             }
         }
