@@ -17,7 +17,7 @@ spec:
         - name: dockerhub-secret
       containers:
         - name: app
-          image: jjwon1230/githubble-be:latest # TODO: 우리 백엔드 이미지로 변경 필요
+          image: yaongmeow/githubble-be:latest # TODO: 우리 백엔드 이미지로 변경 필요
           ports:
             - containerPort: 8080
           env:
