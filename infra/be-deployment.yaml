@@ -39,11 +39,11 @@ spec:
                   name: githubble-secret
                   key: GH_REDIRECT_URI
 
-            - name: OPENROUTER_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: githubble-secret
-                  key: OPENROUTER_API_KEY
+#            - name: OPENROUTER_API_KEY
+#              valueFrom:
+#                secretKeyRef:
+#                  name: githubble-secret
+#                  key: OPENROUTER_API_KEY
 
             - name: AI_PRIMARY_BASE_URL
               value: "https://openrouter.ai/api/v1"
