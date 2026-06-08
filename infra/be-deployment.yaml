@@ -117,38 +117,38 @@ spec:
                   name: githubble-secret
                   key: FE_LANDING_PAGE
 
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: githubble-secret
-                  key: AWS_ACCESS_KEY_ID
-
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: githubble-secret
-                  key: AWS_SECRET_ACCESS_KEY
-
-            - name: AWS_REGION
-              valueFrom:
-                secretKeyRef:
-                  name: githubble-secret
-                  key: AWS_REGION
-
-            - name: S3_ARTIFACT_BUCKET
-              valueFrom:
-                secretKeyRef:
-                  name: githubble-secret
-                  key: S3_ARTIFACT_BUCKET
-
-            - name: AI_SERVER_BASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: githubble-secret
-                  key: AI_SERVER_BASE_URL
-
-            - name: AI_SERVER_GENERATE_PATH
-              valueFrom:
-                secretKeyRef:
-                  name: githubble-secret
-                  key: AI_SERVER_GENERATE_PATH
+#            - name: AWS_ACCESS_KEY_ID
+#              valueFrom:
+#                secretKeyRef:
+#                  name: githubble-secret
+#                  key: AWS_ACCESS_KEY_ID
+#
+#            - name: AWS_SECRET_ACCESS_KEY
+#              valueFrom:
+#                secretKeyRef:
+#                  name: githubble-secret
+#                  key: AWS_SECRET_ACCESS_KEY
+#
+#            - name: AWS_REGION
+#              valueFrom:
+#                secretKeyRef:
+#                  name: githubble-secret
+#                  key: AWS_REGION
+#
+#            - name: S3_ARTIFACT_BUCKET
+#              valueFrom:
+#                secretKeyRef:
+#                  name: githubble-secret
+#                  key: S3_ARTIFACT_BUCKET
+#
+#            - name: AI_SERVER_BASE_URL
+#              valueFrom:
+#                secretKeyRef:
+#                  name: githubble-secret
+#                  key: AI_SERVER_BASE_URL
+#
+#            - name: AI_SERVER_GENERATE_PATH
+#              valueFrom:
+#                secretKeyRef:
+#                  name: githubble-secret
+#                  key: AI_SERVER_GENERATE_PATH
