@@ -13,6 +13,8 @@ spec:
       labels:
         app: be-app # 서비스의 selector.app과 연결 -> 내가 생성하는 pod에 라벨을 붙이겠다는 의미
     spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
       containers:
         - name: app
           image: jjwon1230/githubble-be:latest # TODO: 우리 백엔드 이미지로 변경 필요
